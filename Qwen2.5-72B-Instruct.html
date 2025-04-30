@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>天气查询 - 公共API</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --bg-light: #f5f5f5;
+            --text-dark: #333;
+            --card-bg: #ffffff;
+            --night-bg: #1a1a1a;
+            --night-text: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg-light);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            transition: background 0.3s ease;
+        }
+
+        .container {
+            max-width: 450px;
+            width: 100%;
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            text-align: center;
+            transition: all 0.3s ease-in-out;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--text-dark);
+            margin-bottom: 1.5rem;
+        }
+
+        form {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus {
+            border-color: var(--primary-color);
+        }
+
+        button {
+            padding: 12px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #357ae8;
+        }
+
+        #weatherResult {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .weather-card {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f0f8ff;
+            border-radius: 12px;
+            color: var(--text-dark);
+        }
+
+        .weather-icon {
+            width: 64px;
+            height: 64px;
+            margin: 1rem auto;
+            filter: drop-shadow(0 0 5px rgba(0,0,0,0.1));
+        }
+
+        .forecast {
+            margin-top: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .forecast-item {
+            background-color: #f0f8ff;
+            padding: 1rem;
+            border-radius: 12px;
+            flex: 1 1 calc(33.333% - 1rem);
+            text-align: center;
+        }
+
+        .forecast-item h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        .forecast-item p {
+            margin: 0.25rem 0;
+        }
+
+        .night-mode {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        .night-mode:hover {
+            background-color: #357ae8;
+        }
+
+        .night-mode svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+        }
+
+        @media (max-width: 500px) {
+            form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌤️ 天气查询</h1>
+        <form id="weatherForm">
+            <input type="text" id="cityInput" placeholder="请输入城市名称" required>
+            <button type="submit">查询</button>
+        </form>
+        <div id="weatherResult" class="weather-card">
+            <h2 id="cityName"></h2>
+            <p id="temperature"></p>
+            <p id="description"></p>
+            <p id="windSpeed"></p>
+            <p id="humidity"></p>
+            <p id="uvIndex"></p>
+            <img id="weatherIcon" class="weather-icon" src="" alt="天气图标">
+            <div class="forecast" id="forecast"></div>
+        </div>
+    </div>
+    <div class="night-mode" onclick="toggleNightMode()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.218-8.56L12 3l-.782 1.44A9 9 0 0 1 21 12zM3 17a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2z"/></svg>
+    </div>
+
+    <script>
+        let isNightMode = false;
+
+        function toggleNightMode() {
+            isNightMode = !isNightMode;
+            document.documentElement.style.setProperty('--bg-light', isNightMode ? '#1a1a1a' : '#f5f5f5');
+            document.documentElement.style.setProperty('--text-dark', isNightMode ? '#ffffff' : '#333333');
+            document.documentElement.style.setProperty('--card-bg', isNightMode ? '#2a2a2a' : '#ffffff');
+            document.documentElement.style.setProperty('--text-light', isNightMode ? '#bfbfbf' : '#777777');
+            document.body.style.backgroundColor = isNightMode ? '#1a1a1a' : 'linear-gradient(135deg, #e6f7ff, #f5f5f5)';
+            document.querySelector('.night-mode svg').setAttribute('fill', isNightMode ? '#ffffff' : '#333333');
+        }
+
+        function getWeather(city) {
+            const url = `https://wttr.in/${encodeURIComponent(city)}?format=j1`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || data.nearest_area.length === 0) {
+                        alert("未找到该城市的天气信息，请检查输入是否正确。");
+                        return;
+                    }
+
+                    const currentCondition = data.current_condition[0];
+                    const cityName = data.nearest_area[0].areaName[0].value;
+                    const temperature = currentCondition.temp_C;
+                    const description = currentCondition.weatherDesc[0].value;
+                    const windSpeed = currentCondition.windspeedKmph;
+                    const humidity = currentCondition.humidity;
+                    const uvIndex = currentCondition.uvIndex;
+                    const iconUrl = `https:${currentCondition.weatherIconUrl[0].value}`;
+
+                    document.getElementById('cityName').textContent = cityName;
+                    document.getElementById('temperature').textContent = `温度: ${temperature}°C`;
+                    document.getElementById('description').textContent = `描述: ${description}`;
+                    document.getElementById('windSpeed').textContent = `风速: ${windSpeed} km/h`;
+                    document.getElementById('humidity').textContent = `湿度: ${humidity}%`;
+                    document.getElementById('uvIndex').textContent = `紫外线指数: ${uvIndex}`;
+                    document.getElementById('weatherIcon').src = iconUrl;
+
+                    document.getElementById('weatherResult').style.display = 'block';
+
+                    // 未来三天天气预报
+                    const forecastContainer = document.getElementById('forecast');
+                    forecastContainer.innerHTML = '';
+                    const forecastData = data.weather;
+
+                    forecastData.forEach(day => {
+                        const date = day.date;
+                        const maxTemp = day.maxtempC;
+                        const minTemp = day.mintempC;
+                        const condition = day.hourly[0].weatherDesc[0].value;
+                        const iconUrl = `https:${day.hourly[0].weatherIconUrl[0].value}`;
+
+                        const forecastItem = document.createElement('div');
+                        forecastItem.classList.add('forecast-item');
+                        forecastItem.innerHTML = `
+                            <h3>${date}</h3>
+                            <p>最高温度: ${maxTemp}°C</p>
+                            <p>最低温度: ${minTemp}°C</p>
+                            <p>天气: ${condition}</p>
+                            <img src="${iconUrl}" alt="天气图标" class="weather-icon">
+                        `;
+                        forecastContainer.appendChild(forecastItem);
+                    });
+                })
+                .catch(error => {
+                    console.error('请求失败:', error);
+                    alert('无法获取天气数据，请稍后再试。');
+                });
+        }
+
+        document.getElementById('weatherForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const city = document.getElementById('cityInput').value;
+            getWeather(city);
+        });
+
+        // 自动定位当前地理位置
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(position => {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+                const url = `https://nominatim.openstreetmap.org/reverse.php?format=json&lat=${latitude}&lon=${longitude}`;
+
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        const city = data.address.city || data.address.town;
+                        if (city) {
+                            document.getElementById('cityInput').value = city;
+                            getWeather(city);
+                        } else {
+                            alert("无法获取当前位置的城市信息。");
+                        }
+                    })
+                    .catch(error => {
+                        console.error('位置获取失败:', error);
+                        alert('无法获取当前位置，请手动输入城市。');
+                    });
+            }, error => {
+                console.error('位置获取失败:', error);
+                alert('无法获取当前位置，请手动输入城市。');
+            });
+        } else {
+            alert('您的浏览器不支持地理位置定位。');
+        }
+
+        // 页面加载时自动查询杭州
+        window.onload = function() {
+            document.getElementById('cityInput').value = '杭州';
+            getWeather('杭州');
+        };
+    </script>
+</body>
+</html>

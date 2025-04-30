@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>天气查询 - HarmonyOS Next 风格</title>
+    <style>
+        :root {
+            --bg-day: linear-gradient(135deg, #e6f7ff, #f5f5f5);
+            --bg-night: linear-gradient(135deg, #1a232d, #121b24);
+            --text-day: #333;
+            --text-night: #eee;
+            --card-bg-day: #ffffff;
+            --card-bg-night: #2c3e50;
+            --primary-color-day: #4a90e2;
+            --primary-color-night: #3498db;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg-day);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            color: var(--text-day);
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background-color: var(--card-bg-day);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        form {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        button {
+            padding: 12px 20px;
+            background-color: var(--primary-color-day);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #357ae8;
+        }
+
+        .dark-mode-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-color-day);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .weather-card {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f0f8ff;
+            border-radius: 12px;
+            color: var(--text-day);
+        }
+
+        .forecast {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .forecast-item {
+            background-color: #e8f0fe;
+            padding: 0.8rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .forecast-item img {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 500px) {
+            form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="dark-mode-toggle" onclick="toggleDarkMode()">🌙 夜间模式</button>
+
+    <div class="container">
+        <h1>🌤️ 天气查询</h1>
+        <form id="weatherForm">
+            <input type="text" id="cityInput" placeholder="请输入城市名称" required>
+            <button type="submit">查询</button>
+        </form>
+        <div id="weatherResult" class="weather-card">
+            <h2 id="cityName"></h2>
+            <p id="temperature"></p>
+            <p id="description"></p>
+            <img id="weatherIcon" src="" alt="天气图标">
+            <div id="extraInfo">
+                <p><strong>湿度:</strong> <span id="humidity"></span>%</p>
+                <p><strong>风速:</strong> <span id="windspeed"></span> km/h</p>
+                <p><strong>紫外线:</strong> <span id="uv"></span></p>
+                <p><strong>降水概率:</strong> <span id="chanceofrain"></span>%</p>
+            </div>
+        </div>
+        <div class="forecast" id="forecastContainer">
+            <!-- 未来三天预报 -->
+        </div>
+    </div>
+
+    <script>
+        const isDarkMode = localStorage.getItem('darkMode') === 'true';
+        if (isDarkMode) {
+            document.body.classList.add('dark');
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark');
+            const isDark = document.body.classList.contains('dark');
+            localStorage.setItem('darkMode', isDark);
+        }
+
+        // 获取天气数据
+        async function fetchWeather(city) {
+            try {
+                const url = `https://wttr.in/${encodeURIComponent(city)}?format=j1`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!data || !data.current_condition || !data.weather) {
+                    alert("未找到该城市的天气信息，请检查输入是否正确。");
+                    return;
+                }
+
+                const currentCondition = data.current_condition[0];
+                const cityName = data.nearest_area[0].areaName[0].value;
+
+                document.getElementById('cityName').textContent = cityName;
+                document.getElementById('temperature').textContent = `温度: ${currentCondition.temp_C}°C`;
+                document.getElementById('description').textContent = `描述: ${currentCondition.weatherDesc[0].value}`;
+                document.getElementById('weatherIcon').src = `https:${currentCondition.weatherIconUrl[0].value}`;
+                document.getElementById('humidity').textContent = currentCondition.humidity;
+                document.getElementById('windspeed').textContent = currentCondition.windspeedKmph;
+                document.getElementById('uv').textContent = currentCondition.UV;
+                document.getElementById('chanceofrain').textContent = currentCondition.chanceofrain;
+
+                showForecast(data.weather.slice(1, 4));
+
+                document.getElementById('weatherResult').style.display = 'block';
+            } catch (error) {
+                console.error('请求失败:', error);
+                alert('无法获取天气数据，请稍后再试。');
+            }
+        }
+
+        function showForecast(forecastData) {
+            const container = document.getElementById('forecastContainer');
+            container.innerHTML = '';
+
+            forecastData.forEach(day => {
+                const item = document.createElement('div');
+                item.className = 'forecast-item';
+
+                const date = new Date(day.date).toLocaleDateString('zh-CN');
+                const maxTemp = day.maxtempC;
+                const minTemp = day.mintempC;
+                const desc = day.hourly[0]?.weatherDesc[0]?.value || "未知";
+                const icon = day.hourly[0]?.weatherIconUrl?.[0]?.value ? `https:${day.hourly[0].weatherIconUrl[0].value}` : "";
+
+                item.innerHTML = `
+                    <img src="${icon}" alt="天气图标">
+                    <p>${date}</p>
+                    <p>${minTemp}~${maxTemp}°C</p>
+                    <p>${desc}</p>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // 表单提交事件
+        document.getElementById('weatherForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const city = document.getElementById('cityInput').value;
+            fetchWeather(city);
+        });
+
+        // 自动定位
+        function getLocationAndFetchWeather() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const lat = position.coords.latitude.toFixed(2);
+                    const lon = position.coords.longitude.toFixed(2);
+                    fetchWeather(`${lat},${lon}`);
+                }, error => {
+                    console.log("Geolocation failed:", error);
+                    fetchWeather("杭州");
+                });
+            } else {
+                fetchWeather("杭州");
+            }
+        }
+
+        // 页面加载时自动查询
+        window.onload = getLocationAndFetchWeather;
+    </script>
+</body>
+</html>
