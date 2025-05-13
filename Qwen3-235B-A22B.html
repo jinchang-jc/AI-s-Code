@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>天气应用 - 高级版</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --light-bg: #f5f5f5;
+            --dark-bg: #1e1e2f;
+            --text-light: #fff;
+            --text-dark: #333;
+        }
+
+        body.dark {
+            background: var(--dark-bg);
+            color: var(--text-light);
+        }
+
+        body.light {
+            background: linear-gradient(135deg, #e6f7ff, #f5f5f5);
+            color: var(--text-dark);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        body.dark .container {
+            background-color: rgba(30, 30, 47, 0.85);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        button.switch-mode {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            background: none;
+            border: 1px solid currentColor;
+            color: inherit;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        form, input, button.submit-btn {
+            width: 100%;
+            margin: 1rem 0;
+        }
+
+        input {
+            padding: 0.8rem;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+        }
+
+        button.submit-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            font-size: 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .weather-card, .forecast-card {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f0f8ff;
+            border-radius: 12px;
+        }
+
+        body.dark .weather-card,
+        body.dark .forecast-card {
+            background-color: #2c2d40;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.5rem 0;
+        }
+
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .rain, .cloudy, .sunny, .snow {
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            transition: all 0.5s ease;
+            opacity: 0.15;
+        }
+    </style>
+</head>
+<body class="light">
+    <button class="switch-mode" onclick="toggleDarkMode()">🌙 切换夜间模式</button>
+
+    <div class="background">
+        <div class="sunny"></div>
+        <div class="cloudy"></div>
+        <div class="rain"></div>
+        <div class="snow"></div>
+    </div>
+
+    <div class="container">
+        <h1>🌤️ 天气应用 - 高级版</h1>
+
+        <form id="weatherForm">
+            <input type="text" id="cityInput" placeholder="请输入城市名称">
+            <button type="submit" class="submit-btn">查询</button>
+        </form>
+
+        <button onclick="getLocation()" class="submit-btn">📍 自动定位当前城市</button>
+
+        <div id="weatherResult" class="weather-card">
+            <h2 id="cityName"></h2>
+            <p><strong>温度:</strong> <span id="temperature"></span>°C</p>
+            <p><strong>描述:</strong> <span id="description"></span></p>
+            <img id="weatherIcon" src="" alt="天气图标" style="width: 64px;">
+
+            <div class="detail-item">
+                <span>风速:</span><span id="windspeed"></span>
+            </div>
+            <div class="detail-item">
+                <span>湿度:</span><span id="humidity"></span>
+            </div>
+            <div class="detail-item">
+                <span>紫外线指数:</span><span id="uvIndex"></span>
+            </div>
+            <div class="detail-item">
+                <span>能见度:</span><span id="visibility"></span> km
+            </div>
+        </div>
+
+        <h2>📅 未来三天天气预报</h2>
+        <div id="forecastContainer"></div>
+    </div>
+
+    <script>
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark");
+            document.body.classList.toggle("light");
+        }
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&format=json`)
+                        .then(res => res.json())
+                        .then(data => {
+                            const city = data.address.city || data.address.town || data.address.village;
+                            document.getElementById('cityInput').value = city;
+                            fetchWeather(city);
+                        });
+                }, () => alert("无法获取地理位置"));
+            } else {
+                alert("你的浏览器不支持地理位置服务");
+            }
+        }
+
+        async function fetchWeather(city) {
+            const url = `https://wttr.in/${encodeURIComponent(city)}?format=j1`;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (!data.current_condition) return;
+
+                const now = data.current_condition[0];
+                const area = data.nearest_area[0].areaName[0].value;
+
+                // 更新今日天气
+                document.getElementById('cityName').textContent = area;
+                document.getElementById('temperature').textContent = now.temp_C;
+                document.getElementById('description').textContent = now.weatherDesc[0].value;
+                document.getElementById('windspeed').textContent = `${now.windspeedKmph} km/h`;
+                document.getElementById('humidity').textContent = `${now.humidity}%`;
+                document.getElementById('uvIndex').textContent = now.uvIndex;
+                document.getElementById('visibility').textContent = Math.round(now.visibility / 1000);
+
+                document.getElementById('weatherIcon').src = `https:${now.weatherIconUrl[0].value}`;
+
+                // 设置天气背景
+                setWeatherBackground(now.weatherDesc[0].value);
+
+                // 显示结果
+                document.getElementById('weatherResult').style.display = 'block';
+
+                // 获取并显示未来三天天气
+                showForecast(data.weather.slice(0, 3));
+            } catch (e) {
+                alert("无法获取天气，请重试。");
+            }
+        }
+
+        function showForecast(forecastList) {
+            const container = document.getElementById('forecastContainer');
+            container.innerHTML = '';
+
+            forecastList.forEach(day => {
+                const date = new Date(day.date).toLocaleDateString();
+                container.innerHTML += `
+                    <div class="forecast-card">
+                        <strong>${date}</strong><br>
+                        最高气温: ${day.maxtempC}°C<br>
+                        最低气温: ${day.mintempC}°C<br>
+                        描述: ${day.hourly[0].weatherDesc[0].value}
+                    </div>`;
+            });
+        }
+
+        function setWeatherBackground(desc) {
+            const sunny = document.querySelector('.sunny');
+            const cloudy = document.querySelector('.cloudy');
+            const rain = document.querySelector('.rain');
+            const snow = document.querySelector('.snow');
+
+            [sunny, cloudy, rain, snow].forEach(el => el.style.opacity = 0);
+
+            if (desc.includes('晴')) {
+                sunny.style.backgroundImage = "url('https://source.unsplash.com/1600x900/?sun')";
+                sunny.style.opacity = 0.15;
+            } else if (desc.includes('多云') || desc.includes('阴')) {
+                cloudy.style.backgroundImage = "url('https://source.unsplash.com/1600x900/?clouds')";
+                cloudy.style.opacity = 0.2;
+            } else if (desc.includes('雨')) {
+                rain.style.backgroundImage = "url('https://source.unsplash.com/1600x900/?rain')";
+                rain.style.opacity = 0.25;
+            } else if (desc.includes('雪')) {
+                snow.style.backgroundImage = "url('https://source.unsplash.com/1600x900/?snow')";
+                snow.style.opacity = 0.3;
+            }
+        }
+
+        window.onload = () => fetchWeather('杭州');
+        document.getElementById('weatherForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const city = document.getElementById('cityInput').value;
+            fetchWeather(city);
+        });
+    </script>
+</body>
+</html>
